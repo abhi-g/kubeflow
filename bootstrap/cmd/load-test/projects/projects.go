@@ -11,7 +11,6 @@ import (
 	"time"
 
 	crm "google.golang.org/api/cloudresourcemanager/v1"
-	crmV2 "google.golang.org/api/cloudresourcemanager/v2"
 )
 
 var projectPrefix = "kf-load-test-project"
@@ -37,19 +36,10 @@ func getKubeflowOrg() (*crm.Organization, error) {
 	return org, nil
 }
 
-func getGcpDeployFolder() (*crmV2.Folder, error) {
-	crmService, err := crmV2.NewService(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-}
-
 // CreateProject creates a GCP project for the load test with the given name
-// under the organization identified by the orgId.
-func CreateProject(name, orgID string) error {
+// under the resId resource which can be an organization or a folder.
+func CreateProject(name string, resID *crm.ResourceId) error {
 	log.Printf("Creating GCP Project: %v", name)
-	resID := &crm.ResourceId{Type: "organization", Id: orgID}
 	p := crm.Project{Name: name, ProjectId: name, Parent: resID}
 
 	crmService, err := crm.NewService(ctx)
@@ -60,10 +50,10 @@ func CreateProject(name, orgID string) error {
 	op, err := crmService.Projects.Create(&p).Context(ctx).Do()
 	if err != nil {
 		if strings.Contains(err.Error(), "alreadyExists") {
+			log.Print("Project already exists")
 			return nil
-		} else {
-			return err
 		}
+		return err
 	}
 
 	status := crm.ProjectCreationStatus{}
@@ -100,14 +90,11 @@ func DeleteProject(name string) error {
 // CreateAllProjects creates all num GCP projects for the load test.
 func CreateAllProjects(num int) error {
 	log.Print("Creating ", num, " GCP projects for the load test")
-	org, err := getKubeflowOrg()
-	if err != nil {
-		return err
-	}
-	orgID := strings.Split(org.Name, "/")[1]
+	// Following is the folder ID of "gcp-deploy" folder under kubeflow.org
+	folderID := &crm.ResourceId{Type: "folder", Id: "838562927550"}
 	for i := 0; i < num; i++ {
 		projName := projectPrefix + strconv.Itoa(i)
-		if err := CreateProject(projName, orgID); err != nil {
+		if err := CreateProject(projName, folderID); err != nil {
 			log.Print(err)
 			return err
 		}

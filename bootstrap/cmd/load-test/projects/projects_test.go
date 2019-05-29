@@ -1,17 +1,15 @@
 package projects
 
 import (
-	"strings"
 	"testing"
+
+	crm "google.golang.org/api/cloudresourcemanager/v1"
 )
 
 func TestProjectCreation(t *testing.T) {
-	org, err := getKubeflowOrg()
-	if err != nil {
-		t.Error(err)
-	}
-	orgID := strings.Split(org.Name, "/")[1]
-	if err := CreateProject("test-project-lib", orgID); err != nil {
+	// Following is the folder ID of "gcp-deploy" folder under kubeflow.org
+	folderID := &crm.ResourceId{Type: "folder", Id: "838562927550"}
+	if err := CreateProject("test-project-lib-folder", folderID); err != nil {
 		t.Error(err)
 	}
 }
